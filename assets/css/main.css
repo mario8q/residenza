@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════
+   MAIN.CSS — Variables, reset, tipografía base
+═══════════════════════════════════════════════════════ */
+
+:root {
+  --bg:       #0a0e1a;
+  --surface:  #111827;
+  --surface2: #1a2235;
+  --border:   #1e2d47;
+  --accent:   #3b82f6;
+  --accent2:  #10b981;
+  --accent3:  #f59e0b;
+  --accent4:  #ef4444;
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #64748b;
+  --gold:     #d4a853;
+
+  --font-display: 'Playfair Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+/* ── Reset ─────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── Tipografía utilitaria ─────────────────────────── */
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
+
+.text-accent  { color: var(--accent); }
+.text-green   { color: var(--accent2); }
+.text-yellow  { color: var(--accent3); }
+.text-red     { color: var(--accent4); }
+.text-muted   { color: var(--text3); }
+.text-bold    { font-weight: 600; }
+
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }

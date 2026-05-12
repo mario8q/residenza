@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResidenciasPro – Administración de Conjuntos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/views.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">ResidenciasPro</div>
+      <div class="logo-sub">Panel de Administración</div>
+    </div>
+
+    <div class="complex-badge">
+      <div class="complex-name">🏢 Conjunto Bello Horizonte</div>
+      <div class="complex-info">48 aptos · Torre A y B</div>
+    </div>
+
+    <nav id="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <div class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="residentes">
+        <span class="nav-icon">👥</span> Residentes
+      </div>
+
+      <div class="nav-section-label">Finanzas</div>
+      <div class="nav-item" data-view="cuotas">
+        <span class="nav-icon">💰</span> Cuotas y Pagos
+      </div>
+      <div class="nav-item" data-view="reportes">
+        <span class="nav-icon">📈</span> Reportes
+      </div>
+
+      <div class="nav-section-label">Comunidad</div>
+      <div class="nav-item" data-view="comunicados">
+        <span class="nav-icon">📢</span> Comunicados
+        <span class="nav-badge" id="badge-comunicados"></span>
+      </div>
+      <div class="nav-item" data-view="pqr">
+        <span class="nav-icon">📋</span> PQR
+        <span class="nav-badge" id="badge-pqr"></span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar">CA</div>
+      <div>
+        <div class="user-name">Carlos Administrador</div>
+        <div class="user-role">Administrador</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN
+  ═══════════════════════════════════════════════ -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Dashboard General</div>
+      <div class="topbar-actions">
+        <input class="search-input" type="text" id="global-search" placeholder="🔍  Buscar...">
+        <button class="btn btn-ghost" id="btn-notif">🔔</button>
+        <button class="btn btn-primary" id="btn-main-action">+ Nuevo Residente</button>
+      </div>
+    </div>
+
+    <!-- Contenedor dinámico de vistas -->
+    <div class="content" id="app-content"></div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       MODALES
+  ═══════════════════════════════════════════════ -->
+
+  <!-- Modal: Nuevo/Editar Residente -->
+  <div class="modal-overlay" id="modal-residente">
+    <div class="modal">
+      <div class="modal-title" id="modal-residente-title">➕ Registrar Nuevo Residente</div>
+      <input type="hidden" id="residente-id-edit">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre completo *</label>
+          <input type="text" class="form-input" id="r-nombre" placeholder="Ej: Juan Pérez">
+          <span class="form-error" id="err-r-nombre"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Apartamento *</label>
+          <input type="text" class="form-input" id="r-apto" placeholder="Ej: A-302">
+          <span class="form-error" id="err-r-apto"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de residente</label>
+          <select class="form-input" id="r-tipo">
+            <option value="Propietario">Propietario</option>
+            <option value="Arrendatario">Arrendatario</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cédula / NIT *</label>
+          <input type="text" class="form-input" id="r-cedula" placeholder="Número de documento">
+          <span class="form-error" id="err-r-cedula"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Teléfono *</label>
+          <input type="tel" class="form-input" id="r-telefono" placeholder="300-555-0000">
+          <span class="form-error" id="err-r-telefono"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Correo electrónico *</label>
+          <input type="email" class="form-input" id="r-email" placeholder="correo@ejemplo.com">
+          <span class="form-error" id="err-r-email"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de ingreso</label>
+        <input type="date" class="form-input" id="r-fecha">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="Modal.close('modal-residente')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-residente">Guardar Residente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar Pago -->
+  <div class="modal-overlay" id="modal-pago">
+    <div class="modal">
+      <div class="modal-title">💳 Registrar Pago</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Apartamento *</label>
+          <select class="form-input" id="p-apto"></select>
+          <span class="form-error" id="err-p-apto"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mes de pago *</label>
+          <select class="form-input" id="p-mes"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Monto pagado *</label>
+          <input type="number" class="form-input" id="p-monto" placeholder="210000">
+          <span class="form-error" id="err-p-monto"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Medio de pago</label>
+          <select class="form-input" id="p-medio">
+            <option>Transferencia</option>
+            <option>Efectivo</option>
+            <option>PSE</option>
+            <option>Cheque</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de pago *</label>
+        <input type="date" class="form-input" id="p-fecha">
+        <span class="form-error" id="err-p-fecha"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Referencia / Observaciones</label>
+        <input type="text" class="form-input" id="p-ref" placeholder="Referencia bancaria u observación...">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="Modal.close('modal-pago')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-pago">Registrar Pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo Comunicado -->
+  <div class="modal-overlay" id="modal-comunicado">
+    <div class="modal">
+      <div class="modal-title">📢 Nuevo Comunicado</div>
+      <div class="form-group">
+        <label class="form-label">Asunto *</label>
+        <input type="text" class="form-input" id="c-asunto" placeholder="Título del comunicado">
+        <span class="form-error" id="err-c-asunto"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Destinatarios</label>
+          <select class="form-input" id="c-destinatarios">
+            <option value="General">Todos los residentes</option>
+            <option value="Torre A">Solo Torre A</option>
+            <option value="Torre B">Solo Torre B</option>
+            <option value="Propietarios">Solo Propietarios</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <select class="form-input" id="c-prioridad">
+            <option value="Normal">Normal</option>
+            <option value="Urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensaje *</label>
+        <textarea class="form-input" id="c-mensaje" rows="4" style="resize:vertical" placeholder="Escriba el comunicado aquí..."></textarea>
+        <span class="form-error" id="err-c-mensaje"></span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="Modal.close('modal-comunicado')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-comunicado">📤 Enviar Comunicado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nueva PQR -->
+  <div class="modal-overlay" id="modal-pqr">
+    <div class="modal">
+      <div class="modal-title">📋 Radicar PQR</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Apartamento *</label>
+          <select class="form-input" id="q-apto"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <select class="form-input" id="q-tipo">
+            <option value="Petición">Petición</option>
+            <option value="Queja">Queja</option>
+            <option value="Reclamo">Reclamo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Asunto *</label>
+          <input type="text" class="form-input" id="q-asunto" placeholder="Resumen de la solicitud">
+          <span class="form-error" id="err-q-asunto"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <select class="form-input" id="q-prioridad">
+            <option value="Baja">Baja</option>
+            <option value="Media">Media</option>
+            <option value="Alta">Alta</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea class="form-input" id="q-descripcion" rows="3" style="resize:vertical" placeholder="Descripción detallada..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="Modal.close('modal-pqr')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-pqr">Radicar PQR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notificaciones -->
+  <div id="toast-container"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       SCRIPTS — orden de carga importante
+  ═══════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Utils primero (sin dependencias entre sí) -->
+  <script src="assets/js/utils/modal.js"></script>
+  <script src="assets/js/utils/forms.js"></script>
+  <script src="assets/js/utils/charts.js"></script>
+  <script src="assets/js/utils/notifications.js"></script>
+  <script src="assets/js/utils/pdf.js"></script>
+
+  <!-- Estado global -->
+  <script src="assets/js/data.js"></script>
+
+  <!-- Módulos de vistas -->
+  <script src="assets/js/modules/dashboard.js"></script>
+  <script src="assets/js/modules/residentes.js"></script>
+  <script src="assets/js/modules/cuotas.js"></script>
+  <script src="assets/js/modules/reportes.js"></script>
+  <script src="assets/js/modules/comunicados.js"></script>
+  <script src="assets/js/modules/pqr.js"></script>
+
+  <!-- Router y arranque -->
+  <script src="assets/js/router.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

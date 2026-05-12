@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════
+   VIEWS.CSS — Estilos específicos por vista
+═══════════════════════════════════════════════════════ */
+
+/* ── Reportes: leyenda de gráfico ───────────────────── */
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--text3);
+}
+.chart-legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── Reportes: barras de cartera ────────────────────── */
+.cartera-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+/* ── Dashboard: mini donut stats ────────────────────── */
+.payment-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.payment-legend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* ── Comunicados: stats box ─────────────────────────── */
+.stats-box {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+.stats-box-item { text-align: center; }
+.stats-box-val {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+}
+
+/* ── PQR: tabla compacta ────────────────────────────── */
+.pqr-table td { vertical-align: middle; }
+
+/* ── Empty state ────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+}
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty-state-text { font-size: 0.9rem; }
+
+/* ── Mono resaltado (código de apto) ────────────────── */
+.apto-code {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.82rem;
+}
+
+/* ── Fila de acciones en tablas ─────────────────────── */
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
