@@ -112,8 +112,12 @@ export default function Residentes() {
           </div>
           <div className="form-group">
             <label className="form-label">Apartamento *</label>
-            <input {...f('apto')} placeholder="Ej: A-302"/>
-            {errors.apto && <span className="form-error">{errors.apto}</span>}
+            <select className={`form-input${errors.apto?' error':''}`} value={form.apto||''} onChange={e => setForm(p=>({...p,apto:e.target.value}))}>
+              <option value="">Seleccionar apartamento...</option>
+              {s.apartamentosDisponibles.map(a => (
+                <option key={a.id} value={a.codigo}>{a.codigo} {a.torre_nombre && `(${a.torre_nombre})`}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="form-row">

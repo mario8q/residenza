@@ -34,6 +34,7 @@ app.use('/api/apartamentos', require('./routes/apartamentos'));
 app.use('/api/cuotas',      require('./routes/cuotas'));
 app.use('/api/pqr',         require('./routes/pqr'));
 app.use('/api/comunicados', require('./routes/comunicados'));
+app.use('/api/conjuntos',  require('./routes/conjuntos'));
 
 app.use(express.static(PUBLIC_DIR));
 app.get('*', (_req,res) => res.sendFile(path.join(PUBLIC_DIR,'index.html')));

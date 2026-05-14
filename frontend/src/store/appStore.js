@@ -12,14 +12,53 @@ const COLORS = [
 const mkInitials = (n) => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
 
 const useAppStore = create((set, get) => ({
-  conjunto: { nombre:'Conjunto', torres:[], aptosPorTorre:0, cuotaBase:0 },
+  conjunto: { nombre:'Conjunto', torres:0, aptos:0, cuotaBase:0 },
   residentes: [],
   pagos: [],
   comunicados: [],
   pqr: [],
+  apartamentosDisponibles: [],
   loading: false,
 
-  // ── Cargar datos de la BD ──────────────────────────────────────
+  // ── Cargar datos del conjunto ──────────────────────────────────
+  fetchConjunto: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
+    try {
+      const res = await fetch('/api/conjuntos', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        set({ conjunto: data.data });
+      }
+    } catch (err) {
+      console.error('Error cargando conjunto:', err);
+    }
+  },
+
+  // ── Cargar apartamentos disponibles ────────────────────────────
+  fetchApartamentosDisponibles: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
+    try {
+      const res = await fetch('/api/apartamentos/disponibles', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        set({ apartamentosDisponibles: data.data || [] });
+      }
+    } catch (err) {
+      console.error('Error cargando apartamentos disponibles:', err);
+    }
+  },
+
+  // ── Cargar residentes ─────────────────────────────────────────
   fetchResidentes: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
@@ -54,12 +93,19 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // ── Cargar pagos/cuotas ───────────────────────────────────────
   fetchPagos: async () => {
     const token = useAuthStore.getState().token;
+    const user = useAuthStore.getState().user;
     if (!token) return;
     
     try {
-      const res = await fetch('/api/cuotas', {
+      // Si es residente, usa el endpoint específico; si es admin, usa el general
+      const endpoint = user?.rol === 'residente' 
+        ? '/api/cuotas/residente/mis-cuotas'
+        : '/api/cuotas';
+
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -84,6 +130,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // ── Cargar comunicados ────────────────────────────────────────
   fetchComunicados: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
@@ -113,6 +160,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // ── Cargar PQRs ──────────────────────────────────────────────
   fetchPQR: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
@@ -143,7 +191,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // ── Acciones (agregar/actualizar) ─────────────────────────────
+  // ── Acciones: Residentes ──────────────────────────────────────
   addResidente: async (form) => {
     const token = useAuthStore.getState().token;
     try {
@@ -217,7 +265,8 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  addPago: async (form) => {
+  // ── Acciones: Pagos/Cuotas ────────────────────────────────────
+    addPago: async (form) => {
     const token = useAuthStore.getState().token;
     try {
       const res = await fetch('/api/cuotas', {
@@ -237,14 +286,52 @@ const useAppStore = create((set, get) => ({
       
       const data = await res.json();
       if (res.ok) {
+        // Esperar un poco y luego refrescar
+        await new Promise(r => setTimeout(r, 500));
         await get().fetchPagos();
-        return { ...data.data, success: true };
+        return { success: true, ...data.data };
+      } else {
+        return { success: false, error: data.error || 'Error desconocido' };
       }
     } catch (err) {
       console.error('Error registrando pago:', err);
+      return { success: false, error: err.message };
     }
   },
 
+  addPagoResidente: async (form) => {
+    const token = useAuthStore.getState().token;
+    try {
+      const res = await fetch('/api/cuotas/residente/pagar', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          monto: form.monto,
+          medio_pago: form.medio,
+          fecha_pago: form.fecha,
+          referencia: form.ref,
+        }),
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        // Esperar un poco y luego refrescar
+        await new Promise(r => setTimeout(r, 500));
+        await get().fetchPagos();
+        return { success: true, ...data.data };
+      } else {
+        return { success: false, error: data.error || 'Error desconocido' };
+      }
+    } catch (err) {
+      console.error('Error registrando pago:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  // ── Acciones: Comunicados ─────────────────────────────────────
   addComunicado: async (form) => {
     const token = useAuthStore.getState().token;
     try {
@@ -265,6 +352,25 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  deleteComunicado: async (id) => {
+    const token = useAuthStore.getState().token;
+    try {
+      const res = await fetch(`/api/comunicados/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        await get().fetchComunicados();
+        return { success: true };
+      }
+    } catch (err) {
+      console.error('Error eliminando comunicado:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  // ── Acciones: PQR ────────────────────────────────────────────
   addPQR: async (form) => {
     const token = useAuthStore.getState().token;
     try {
@@ -315,9 +421,9 @@ const useAppStore = create((set, get) => ({
 
   // ── Helpers ───────────────────────────────────────────────────
   getTotalRecaudadoMes: (mes) => 
-  get().pagos
-    .filter(p => p.mes === mes)
-    .reduce((s, p) => s + Number(p.monto), 0),
+    get().pagos
+      .filter(p => p.mes === mes)
+      .reduce((s, p) => s + Number(p.monto), 0),
 
   getRecaudoMensual: () => {
     const pagos = get().pagos;
@@ -350,8 +456,11 @@ const useAppStore = create((set, get) => ({
   },
 
   getEstadoPago: (apto, mes) => {
-    const cuota = 210000; // Cambiar según tu cuota base
-    const pagado = get().pagos.filter(p => p.apto === apto && p.mes === mes).reduce((s, p) => s + p.monto, 0);
+    const cuota = get().conjunto.cuotaBase || 210000; // Usa la cuota del conjunto
+    const pagado = get().pagos
+      .filter(p => p.apto === apto && p.mes === mes)
+      .reduce((s, p) => s + Number(p.monto), 0);
+    
     if (pagado >= cuota) return { estado: 'Pagado', pagado, saldo: 0 };
     if (pagado > 0) return { estado: 'Parcial', pagado, saldo: cuota - pagado };
     return { estado: 'Pendiente', pagado: 0, saldo: cuota };

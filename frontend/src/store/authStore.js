@@ -13,6 +13,8 @@ const useAuthStore = create((set) => ({
     // Cargar datos de la BD después de autenticar
     const appStore = useAppStore.getState();
     setTimeout(() => {
+      appStore.fetchConjunto();
+      appStore.fetchApartamentosDisponibles();
       appStore.fetchResidentes();
       appStore.fetchPagos();
       appStore.fetchComunicados();

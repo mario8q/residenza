@@ -52,19 +52,37 @@ export default function Comunicados() {
               {lista.length===0
                 ? <div className="empty-state"><div className="empty-state-icon">📢</div><div className="empty-state-text">No hay comunicados aún.</div></div>
                 : lista.map(c=>(
-                  <div key={c.id} className="comunicado-item">
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                      <div className="com-title">
-                        {c.prioridad!=='Urgente'&&<span className="com-dot"/>}{c.asunto}
+                    <div key={c.id} className="comunicado-item">
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                        <div style={{flex:1}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                            <div className="com-title">
+                              {c.prioridad!=='Urgente'&&<span className="com-dot"/>}{c.asunto}
+                            </div>
+                            <span className={`badge ${c.prioridad==='Urgente'?'badge-red':DEST_BADGE[c.destinatarios]||'badge-blue'}`}>
+                              {c.prioridad==='Urgente'?'Urgente':c.destinatarios}
+                            </span>
+                          </div>
+                          <div className="com-meta">📅 {c.fecha} · 👁 {c.lecturas} visualizaciones · ✉ {c.enviados} enviados</div>
+                          <div style={{fontSize:'.78rem',color:'var(--text3)',marginTop:6}}>{c.mensaje.slice(0,100)}{c.mensaje.length>100?'...':''}</div>
+                        </div>
+                        {!isResidente && (
+                          <button 
+                            className="btn btn-danger btn-sm" 
+                            style={{marginLeft:10,flexShrink:0}}
+                            onClick={() => {
+                              if(confirm('¿Eliminar este comunicado?')) {
+                                s.deleteComunicado(c.id);
+                                toast.info('Comunicado eliminado');
+                              }
+                            }}
+                          >
+                            🗑
+                          </button>
+                        )}
                       </div>
-                      <span className={`badge ${c.prioridad==='Urgente'?'badge-red':DEST_BADGE[c.destinatarios]||'badge-blue'}`}>
-                        {c.prioridad==='Urgente'?'Urgente':c.destinatarios}
-                      </span>
                     </div>
-                    <div className="com-meta">📅 {c.fecha} · 👁 {c.lecturas} visualizaciones · ✉ {c.enviados} enviados</div>
-                    <div style={{fontSize:'.78rem',color:'var(--text3)',marginTop:6}}>{c.mensaje.slice(0,100)}{c.mensaje.length>100?'...':''}</div>
-                  </div>
-                ))}
+                  ))}
             </div>
           </div>
 
@@ -107,19 +125,37 @@ export default function Comunicados() {
             {lista.length===0
               ? <div className="empty-state"><div className="empty-state-icon">📢</div><div className="empty-state-text">No hay comunicados aún.</div></div>
               : lista.map(c=>(
-                <div key={c.id} className="comunicado-item">
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                    <div className="com-title">
-                      {c.prioridad!=='Urgente'&&<span className="com-dot"/>}{c.asunto}
+                  <div key={c.id} className="comunicado-item">
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                          <div className="com-title">
+                            {c.prioridad!=='Urgente'&&<span className="com-dot"/>}{c.asunto}
+                          </div>
+                          <span className={`badge ${c.prioridad==='Urgente'?'badge-red':DEST_BADGE[c.destinatarios]||'badge-blue'}`}>
+                            {c.prioridad==='Urgente'?'Urgente':c.destinatarios}
+                          </span>
+                        </div>
+                        <div className="com-meta">📅 {c.fecha} · 👁 {c.lecturas} visualizaciones · ✉ {c.enviados} enviados</div>
+                        <div style={{fontSize:'.78rem',color:'var(--text3)',marginTop:6}}>{c.mensaje.slice(0,100)}{c.mensaje.length>100?'...':''}</div>
+                      </div>
+                      {!isResidente && (
+                        <button 
+                          className="btn btn-danger btn-sm" 
+                          style={{marginLeft:10,flexShrink:0}}
+                          onClick={() => {
+                            if(confirm('¿Eliminar este comunicado?')) {
+                              s.deleteComunicado(c.id);
+                              toast.info('Comunicado eliminado');
+                            }
+                          }}
+                        >
+                          🗑
+                        </button>
+                      )}
                     </div>
-                    <span className={`badge ${c.prioridad==='Urgente'?'badge-red':DEST_BADGE[c.destinatarios]||'badge-blue'}`}>
-                      {c.prioridad==='Urgente'?'Urgente':c.destinatarios}
-                    </span>
                   </div>
-                  <div className="com-meta">📅 {c.fecha}</div>
-                  <div style={{fontSize:'.85rem',color:'var(--text2)',marginTop:10}}>{c.mensaje}</div>
-                </div>
-              ))}
+                ))}
           </div>
         </div>
       )}

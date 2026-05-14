@@ -2,7 +2,57 @@ const router = require('express').Router();
 const { verifyToken, requireRol } = require('../middlewares/auth');
 const { setTenant } = require('../middlewares/tenant');
 
-// GET /api/cuotas - Listar pagos
+// ── Helper: Obtener o crear período ────────────────────────────
+async function getOrCreatePeriodo(tenantQuery, anio, mes, cuotaBase) {
+  // Intentar obtener el período
+  let result = await tenantQuery(
+    `SELECT id FROM periodos WHERE anio = $1 AND mes = $2`,
+    [anio, mes]
+  );
+
+  if (result.rows.length > 0) {
+    return result.rows[0].id;
+  }
+
+  // Si no existe, crear uno
+  // Calcular fecha de vencimiento (último día del mes)
+  const ultimoDia = new Date(anio, mes, 0).getDate();
+  const fechaVence = `${anio}-${String(mes).padStart(2, '0')}-${ultimoDia}`;
+
+  const createResult = await tenantQuery(
+    `INSERT INTO periodos (anio, mes, cuota_base, fecha_vence, tasa_mora)
+     VALUES ($1, $2, $3, $4, 0.015)
+     RETURNING id`,
+    [anio, mes, cuotaBase, fechaVence]
+  );
+
+  return createResult.rows[0].id;
+}
+
+// ── Helper: Obtener o crear obligación ────────────────────────
+async function getOrCreateObligacion(tenantQuery, periodoId, apartamentoId, montoBasse) {
+  // Intentar obtener la obligación
+  let result = await tenantQuery(
+    `SELECT id FROM obligaciones WHERE periodo_id = $1 AND apartamento_id = $2`,
+    [periodoId, apartamentoId]
+  );
+
+  if (result.rows.length > 0) {
+    return result.rows[0].id;
+  }
+
+  // Si no existe, crear una
+  const createResult = await tenantQuery(
+    `INSERT INTO obligaciones (periodo_id, apartamento_id, monto_base, interes_mora)
+     VALUES ($1, $2, $3, 0)
+     RETURNING id`,
+    [periodoId, apartamentoId, montoBasse]
+  );
+
+  return createResult.rows[0].id;
+}
+
+// GET /api/cuotas - Listar pagos (solo admin)
 router.get('/', verifyToken, setTenant, async (req, res, next) => {
   try {
     const result = await req.tenantQuery(
@@ -17,7 +67,7 @@ router.get('/', verifyToken, setTenant, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/cuotas/residente - Mis cuotas (para residentes)
+// GET /api/cuotas/residente/mis-cuotas - Mis cuotas (para residentes)
 router.get('/residente/mis-cuotas', verifyToken, setTenant, async (req, res, next) => {
   try {
     const residenteId = req.user.id;
@@ -36,13 +86,17 @@ router.get('/residente/mis-cuotas', verifyToken, setTenant, async (req, res, nex
   } catch (err) { next(err); }
 });
 
-// POST /api/cuotas - Registrar pago
+// POST /api/cuotas - Registrar pago (solo admin)
 router.post('/', verifyToken, requireRol('admin'), setTenant, async (req, res, next) => {
   try {
     const { apto_codigo, monto, medio_pago, fecha_pago, referencia } = req.body;
 
     if (!apto_codigo || !monto || !fecha_pago) {
       return res.status(400).json({ error: 'Campos requeridos: apto_codigo, monto, fecha_pago.' });
+    }
+
+    if (Number(monto) <= 0) {
+      return res.status(400).json({ error: 'El monto debe ser mayor a 0.' });
     }
 
     // Obtener apartamento
@@ -57,6 +111,18 @@ router.post('/', verifyToken, requireRol('admin'), setTenant, async (req, res, n
 
     const apartamento_id = aptRes.rows[0].id;
 
+    // Obtener la cuota base del conjunto (viene del token)
+    const cuotaBase = req.user.cuotaBase || 210000;
+
+    // Extraer año y mes de fecha_pago (formato: YYYY-MM-DD)
+    const [anio, mes] = fecha_pago.split('-').map(Number);
+
+    // Obtener o crear período
+    const periodoId = await getOrCreatePeriodo(req.tenantQuery, anio, mes, cuotaBase);
+
+    // Obtener o crear obligación
+    const obligacionId = await getOrCreateObligacion(req.tenantQuery, periodoId, apartamento_id, cuotaBase);
+
     // Generar número de recibo
     const reciboRes = await req.tenantQuery(
       `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_recibo, 5) AS INTEGER)), 0) + 1 AS next_num FROM pagos`
@@ -66,15 +132,75 @@ router.post('/', verifyToken, requireRol('admin'), setTenant, async (req, res, n
 
     // Registrar pago
     const result = await req.tenantQuery(
-      `INSERT INTO pagos (apartamento_id, monto, medio_pago, referencia, fecha_pago, numero_recibo, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `INSERT INTO pagos (obligacion_id, apartamento_id, monto, medio_pago, referencia, fecha_pago, numero_recibo, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        RETURNING id, monto, medio_pago AS medio, referencia AS ref, fecha_pago AS fecha, numero_recibo AS recibo`,
-      [apartamento_id, monto, medio_pago || 'Transferencia', referencia || null, fecha_pago, numero_recibo]
+      [obligacionId, apartamento_id, monto, medio_pago || 'Transferencia', referencia || null, fecha_pago, numero_recibo]
     );
 
     res.status(201).json({ 
       data: result.rows[0],
       message: `Pago registrado. Recibo: ${numero_recibo}`
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/cuotas/residente/pagar - Residentes registran su propio pago
+router.post('/residente/pagar', verifyToken, setTenant, async (req, res, next) => {
+  try {
+    const residenteId = req.user.id;
+    const { monto, medio_pago, referencia, fecha_pago } = req.body;
+
+    if (!monto || !fecha_pago) {
+      return res.status(400).json({ error: 'Campos requeridos: monto, fecha_pago.' });
+    }
+
+    if (Number(monto) <= 0) {
+      return res.status(400).json({ error: 'El monto debe ser mayor a 0.' });
+    }
+
+    // Obtener apartamento del residente
+    const resRes = await req.tenantQuery(
+      `SELECT apartamento_id FROM residentes WHERE id = $1`,
+      [residenteId]
+    );
+
+    if (resRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Residente no encontrado.' });
+    }
+
+    const apartamento_id = resRes.rows[0].apartamento_id;
+
+    // Obtener la cuota base del conjunto (viene del token o usa default)
+    const cuotaBase = req.user.cuotaBase || 210000;
+
+    // Extraer año y mes de fecha_pago
+    const [anio, mes] = fecha_pago.split('-').map(Number);
+
+    // Obtener o crear período
+    const periodoId = await getOrCreatePeriodo(req.tenantQuery, anio, mes, cuotaBase);
+
+    // Obtener o crear obligación
+    const obligacionId = await getOrCreateObligacion(req.tenantQuery, periodoId, apartamento_id, cuotaBase);
+
+    // Generar número de recibo
+    const reciboRes = await req.tenantQuery(
+      `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_recibo, 5) AS INTEGER)), 0) + 1 AS next_num FROM pagos`
+    );
+    const nextNum = reciboRes.rows[0].next_num;
+    const numero_recibo = `REC-${String(nextNum).padStart(4, '0')}`;
+
+    // Registrar pago
+    const result = await req.tenantQuery(
+      `INSERT INTO pagos (obligacion_id, apartamento_id, monto, medio_pago, referencia, fecha_pago, numero_recibo, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING id, monto, medio_pago AS medio, referencia AS ref, fecha_pago AS fecha, numero_recibo AS recibo`,
+      [obligacionId, apartamento_id, Number(monto), medio_pago || 'Transferencia', referencia || null, fecha_pago, numero_recibo]
+    );
+
+    res.status(201).json({
+      data: result.rows[0],
+      message: `¡Pago registrado exitosamente! Recibo: ${numero_recibo}`
     });
   } catch (err) { next(err); }
 });
