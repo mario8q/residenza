@@ -270,10 +270,10 @@ async function loginResidente(req, res, next) {
 
 async function registerResidente(req, res, next) {
   try {
-    const { nombre, documento, tipo_documento, email, apto_codigo, password, passwordConfirm } = req.body;
+    const { nombre, documento, tipo_documento, email, telefono, apto_codigo, password, passwordConfirm } = req.body;
 
     // Validaciones
-    if (!nombre || !documento || !email || !apto_codigo || !password || !passwordConfirm) {
+    if (!nombre || !documento || !email || !telefono || !apto_codigo || !password || !passwordConfirm) {
       return res.status(400).json({ error: 'Todos los campos son requeridos.' });
     }
 
@@ -350,15 +350,16 @@ async function registerResidente(req, res, next) {
     try {
       const createRes = await client.query(`
         INSERT INTO residentes
-          (apartamento_id, nombre, documento, tipo_documento, email, password_hash, activo, fecha_ingreso)
-        VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
-        RETURNING id, nombre, email
+          (apartamento_id, nombre, documento, tipo_documento, email, telefono, password_hash, activo, fecha_ingreso)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW())
+        RETURNING id, nombre, email, telefono
       `, [
         apartamento.id,
         nombre,
         documento,
         tipo_documento || 'CC',
         email.toLowerCase().trim(),
+        telefono,
         password_hash,
       ]);
 
@@ -384,6 +385,7 @@ async function registerResidente(req, res, next) {
           id:              nuevoResidente.id,
           email:           nuevoResidente.email,
           nombre:          nuevoResidente.nombre,
+          telefono:        nuevoResidente.telefono,
           rol:             'residente',
           conjuntoId:      conjuntoInfo.id,
           conjuntoNombre:  conjuntoInfo.nombre,

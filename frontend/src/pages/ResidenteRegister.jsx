@@ -7,6 +7,7 @@ export default function ResidenteRegister() {
   const [documento, setDocumento] = useState('');
   const [tipoDocumento, setTipoDocumento] = useState('CC');
   const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [apartamentos, setApartamentos] = useState([]);
   const [aptoSeleccionado, setAptoSeleccionado] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,7 @@ export default function ResidenteRegister() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingApts, setLoadingApts] = useState(true);
+
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
@@ -23,6 +25,7 @@ export default function ResidenteRegister() {
       try {
         const res = await fetch('/api/apartamentos/disponibles');
         const data = await res.json();
+
         if (res.ok) {
           setApartamentos(data.data || []);
         }
@@ -39,12 +42,27 @@ export default function ResidenteRegister() {
   const handle = async () => {
     setError('');
 
-    // Validaciones
-    if (!nombre || !documento || !email || !aptoSeleccionado || !password || !passwordConfirm) {
+    // Validar campos requeridos
+    if (
+      !nombre ||
+      !documento ||
+      !email ||
+      !telefono ||
+      !aptoSeleccionado ||
+      !password ||
+      !passwordConfirm
+    ) {
       setError('Completa todos los campos.');
       return;
     }
 
+    // Validar teléfono
+    if (!/^[0-9]{10}$/.test(telefono)) {
+      setError('El teléfono debe tener exactamente 10 dígitos.');
+      return;
+    }
+
+    // Validar contraseñas
     if (password !== passwordConfirm) {
       setError('Las contraseñas no coinciden.');
       return;
@@ -56,16 +74,20 @@ export default function ResidenteRegister() {
     }
 
     setLoading(true);
+
     try {
       const res = await fetch('/api/auth/register/residente', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           nombre,
           documento,
           tipo_documento: tipoDocumento,
-          email: email.toLowerCase(),
+          email: email.toLowerCase().trim(),
+          telefono,
           apto_codigo: aptoSeleccionado,
           password,
           passwordConfirm,
@@ -73,14 +95,20 @@ export default function ResidenteRegister() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.error || 'Error al registrarse.');
         return;
       }
 
+      // Guardar sesión
       setAuth(data.accessToken, data.user);
+
+      // Redirigir al dashboard
       navigate('/');
+
     } catch (err) {
+      console.error(err);
       setError('No se pudo conectar al servidor.');
     } finally {
       setLoading(false);
@@ -88,24 +116,39 @@ export default function ResidenteRegister() {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') handle();
+    if (e.key === 'Enter') {
+      handle();
+    }
   };
 
   return (
     <div className="login-page">
       <div className="login-wrapper">
+
         <div className="brand">
           <div className="brand-title">ResidenciasPro</div>
           <div className="brand-sub">Registro de Residente</div>
         </div>
+
         <div className="login-card" style={{ maxWidth: '500px' }}>
+
           <div className="login-title">Crea tu cuenta</div>
-          <div className="login-sub">Completa el formulario para registrarte</div>
+          <div className="login-sub">
+            Completa el formulario para registrarte
+          </div>
 
-          {error && <div className="error-banner">{error}</div>}
+          {error && (
+            <div className="error-banner">
+              {error}
+            </div>
+          )}
 
+          {/* Nombre */}
           <div className="form-group">
-            <label className="form-label">Nombre completo *</label>
+            <label className="form-label">
+              Nombre completo *
+            </label>
+
             <input
               className="form-input"
               type="text"
@@ -116,9 +159,19 @@ export default function ResidenteRegister() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '12px' }}>
+          {/* Documento */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1.5fr',
+              gap: '12px',
+            }}
+          >
             <div className="form-group">
-              <label className="form-label">Tipo documento *</label>
+              <label className="form-label">
+                Tipo documento *
+              </label>
+
               <select
                 className="form-input"
                 value={tipoDocumento}
@@ -132,7 +185,10 @@ export default function ResidenteRegister() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Número de documento *</label>
+              <label className="form-label">
+                Número de documento *
+              </label>
+
               <input
                 className="form-input"
                 type="text"
@@ -144,8 +200,12 @@ export default function ResidenteRegister() {
             </div>
           </div>
 
+          {/* Email */}
           <div className="form-group">
-            <label className="form-label">Correo electrónico *</label>
+            <label className="form-label">
+              Correo electrónico *
+            </label>
+
             <input
               className="form-input"
               type="email"
@@ -156,19 +216,47 @@ export default function ResidenteRegister() {
             />
           </div>
 
+          {/* Teléfono */}
           <div className="form-group">
-            <label className="form-label">Apartamento *</label>
+            <label className="form-label">
+              Teléfono *
+            </label>
+
+            <input
+              className="form-input"
+              type="tel"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="3001234567"
+              onKeyDown={handleKeyPress}
+            />
+          </div>
+
+          {/* Apartamento */}
+          <div className="form-group">
+            <label className="form-label">
+              Apartamento *
+            </label>
+
             {loadingApts ? (
-              <div style={{ padding: '10px', color: '#999' }}>Cargando apartamentos...</div>
+              <div style={{ padding: '10px', color: '#999' }}>
+                Cargando apartamentos...
+              </div>
             ) : (
               <select
                 className="form-input"
                 value={aptoSeleccionado}
                 onChange={(e) => setAptoSeleccionado(e.target.value)}
               >
-                <option value="">Selecciona tu apartamento</option>
+                <option value="">
+                  Selecciona tu apartamento
+                </option>
+
                 {apartamentos.map((apto) => (
-                  <option key={apto.codigo} value={apto.codigo}>
+                  <option
+                    key={apto.codigo}
+                    value={apto.codigo}
+                  >
                     {apto.codigo} - {apto.torre_nombre} (Piso {apto.piso})
                   </option>
                 ))}
@@ -176,8 +264,12 @@ export default function ResidenteRegister() {
             )}
           </div>
 
+          {/* Contraseña */}
           <div className="form-group">
-            <label className="form-label">Contraseña *</label>
+            <label className="form-label">
+              Contraseña *
+            </label>
+
             <input
               className="form-input"
               type="password"
@@ -188,8 +280,12 @@ export default function ResidenteRegister() {
             />
           </div>
 
+          {/* Confirmar contraseña */}
           <div className="form-group">
-            <label className="form-label">Confirmar contraseña *</label>
+            <label className="form-label">
+              Confirmar contraseña *
+            </label>
+
             <input
               className="form-input"
               type="password"
@@ -200,7 +296,12 @@ export default function ResidenteRegister() {
             />
           </div>
 
-          <button className="btn-submit" onClick={handle} disabled={loading || loadingApts}>
+          {/* Botón */}
+          <button
+            className="btn-submit"
+            onClick={handle}
+            disabled={loading || loadingApts}
+          >
             {loading ? (
               <>
                 <div className="spinner" />
@@ -211,12 +312,28 @@ export default function ResidenteRegister() {
             )}
           </button>
 
-          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.95rem' }}>
+          {/* Login */}
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: '16px',
+              fontSize: '0.95rem',
+            }}
+          >
             ¿Ya tienes cuenta?{' '}
-            <Link to="/login" style={{ color: '#6b4c8f', textDecoration: 'none', fontWeight: 'bold' }}>
+
+            <Link
+              to="/login"
+              style={{
+                color: '#6b4c8f',
+                textDecoration: 'none',
+                fontWeight: 'bold',
+              }}
+            >
               Inicia sesión
             </Link>
           </div>
+
         </div>
       </div>
     </div>

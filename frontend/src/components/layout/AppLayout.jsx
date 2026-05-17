@@ -5,7 +5,7 @@ import useAppStore from '../../store/appStore';
 import useAuthStore from '../../store/authStore';
 
 const TITLES_ADMIN = {
-  '/':'/Dashboard General',
+  '/':'Dashboard General',
   '/residentes':'Gestión de Residentes',
   '/cuotas':'Cuotas y Pagos',
   '/reportes':'Reportes Financieros',

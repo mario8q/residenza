@@ -57,10 +57,10 @@ router.get('/', verifyToken, setTenant, async (req, res, next) => {
   try {
     const result = await req.tenantQuery(
       `SELECT p.id, p.monto, p.medio_pago AS medio, p.referencia AS ref, p.fecha_pago AS fecha,
-              p.numero_recibo AS recibo, a.codigo AS apto, r.nombre AS residente
+              p.numero_recibo AS recibo, a.codigo AS apto,
+              (SELECT nombre FROM residentes WHERE apartamento_id = a.id LIMIT 1) AS residente
        FROM pagos p
        LEFT JOIN apartamentos a ON a.id = p.apartamento_id
-       LEFT JOIN residentes r ON r.apartamento_id = a.id
        ORDER BY p.created_at DESC`
     );
     res.json({ data: result.rows });
@@ -202,6 +202,78 @@ router.post('/residente/pagar', verifyToken, setTenant, async (req, res, next) =
       data: result.rows[0],
       message: `¡Pago registrado exitosamente! Recibo: ${numero_recibo}`
     });
+  } catch (err) { next(err); }
+});
+
+// GET /api/cuotas/estado/admin - Estado actual de todos los residentes (ADMIN)
+router.get('/estado/admin', verifyToken, requireRol('admin'), setTenant, async (req, res, next) => {
+  try {
+    // Obtener mes y año actual
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const mesFull = `${anio}-${mes}`;
+
+    const result = await req.tenantQuery(
+      `SELECT 
+        a.id,
+        a.codigo AS apto,
+        r.nombre,
+        p.cuota_base,
+        COALESCE(SUM(pag.monto), 0)::NUMERIC(12,2) AS pagado,
+        (p.cuota_base - COALESCE(SUM(pag.monto), 0))::NUMERIC(12,2) AS saldo,
+        CASE 
+          WHEN COALESCE(SUM(pag.monto), 0) >= p.cuota_base THEN 'Pagado'
+          WHEN COALESCE(SUM(pag.monto), 0) > 0 THEN 'Parcial'
+          ELSE 'Pendiente'
+        END AS estado
+       FROM apartamentos a
+       LEFT JOIN residentes r ON r.apartamento_id = a.id
+       LEFT JOIN periodos p ON p.anio = $1 AND LPAD(p.mes::TEXT, 2, '0') = $2
+       LEFT JOIN obligaciones o ON o.apartamento_id = a.id AND o.periodo_id = p.id
+       LEFT JOIN pagos pag ON pag.obligacion_id = o.id
+       WHERE p.id IS NOT NULL
+       GROUP BY a.id, a.codigo, r.nombre, p.cuota_base
+       ORDER BY a.codigo ASC`,
+      [anio, mes]
+    );
+    res.json({ data: result.rows });
+  } catch (err) { next(err); }
+});
+
+// GET /api/cuotas/estado/residente - Mi estado actual (RESIDENTE)
+router.get('/estado/residente', verifyToken, setTenant, async (req, res, next) => {
+  try {
+    const residenteId = req.user.id;
+    
+    // Obtener mes y año actual
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+
+    const result = await req.tenantQuery(
+      `SELECT 
+        a.codigo AS apto,
+        r.nombre,
+        p.cuota_base,
+        COALESCE(SUM(pag.monto), 0)::NUMERIC(12,2) AS pagado,
+        (p.cuota_base - COALESCE(SUM(pag.monto), 0))::NUMERIC(12,2) AS saldo,
+        CASE 
+          WHEN COALESCE(SUM(pag.monto), 0) >= p.cuota_base THEN 'Pagado'
+          WHEN COALESCE(SUM(pag.monto), 0) > 0 THEN 'Parcial'
+          ELSE 'Pendiente'
+        END AS estado
+       FROM residentes r
+       LEFT JOIN apartamentos a ON r.apartamento_id = a.id
+       LEFT JOIN periodos p ON p.anio = $1 AND LPAD(p.mes::TEXT, 2, '0') = $2
+       LEFT JOIN obligaciones o ON o.apartamento_id = a.id AND o.periodo_id = p.id
+       LEFT JOIN pagos pag ON pag.obligacion_id = o.id
+       WHERE r.id = $3 AND p.id IS NOT NULL
+       GROUP BY r.id, a.codigo, r.nombre, p.cuota_base`,
+      [anio, mes, residenteId]
+    );
+    
+    res.json({ data: result.rows[0] || null });
   } catch (err) { next(err); }
 });
 

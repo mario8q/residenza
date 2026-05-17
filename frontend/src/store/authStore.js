@@ -10,16 +10,23 @@ const useAuthStore = create((set) => ({
     sessionStorage.setItem('user', JSON.stringify(user));
     set({ token, user });
     
-    // Cargar datos de la BD después de autenticar
+    // Cargar datos de la BD después de autenticar (secuencial y robusto)
     const appStore = useAppStore.getState();
-    setTimeout(() => {
-      appStore.fetchConjunto();
-      appStore.fetchApartamentosDisponibles();
-      appStore.fetchResidentes();
-      appStore.fetchPagos();
-      appStore.fetchComunicados();
-      appStore.fetchPQR();
-    }, 100);
+    
+    // Ejecutar cargas de forma secuencial para evitar conflictos
+    (async () => {
+      try {
+        await appStore.fetchConjunto();
+        await appStore.fetchApartamentosDisponibles();
+        await appStore.fetchResidentes();
+        // fetchPagos depende de user.rol, así que debe ir después de setAuth
+        await appStore.fetchPagos();
+        await appStore.fetchComunicados();
+        await appStore.fetchPQR();
+      } catch (err) {
+        console.error('Error cargando datos iniciales:', err);
+      }
+    })();
   },
   
   logout: () => {

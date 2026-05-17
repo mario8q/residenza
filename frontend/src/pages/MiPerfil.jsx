@@ -69,14 +69,14 @@ export default function MiPerfil() {
         <div className="card-body">
           <div className="form-group">
             <label className="form-label">Nombre</label>
-            <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+            <div style={{ padding: '10px', background: '#010e23', borderRadius: '6px' }}>
               {user?.nombre || 'N/A'}
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">Correo electrónico</label>
-            <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+            <div style={{ padding: '10px', background: '#010e23', borderRadius: '6px' }}>
               {user?.email || 'N/A'}
             </div>
           </div>
@@ -85,14 +85,14 @@ export default function MiPerfil() {
             <>
               <div className="form-group">
                 <label className="form-label">Apartamento</label>
-                <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+                <div style={{ padding: '10px', background: '#010e23', borderRadius: '6px' }}>
                   {user?.apartamento || 'N/A'}
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Conjunto</label>
-                <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+                <div style={{ padding: '10px', background: '#010e23', borderRadius: '6px' }}>
                   {user?.conjuntoNombre || 'N/A'}
                 </div>
               </div>
