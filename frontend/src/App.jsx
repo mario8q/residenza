@@ -11,6 +11,7 @@ import Reportes           from './pages/Reportes'
 import Comunicados        from './pages/Comunicados'
 import PQR                from './pages/PQR'
 import MiPerfil           from './pages/MiPerfil'
+import Edificio from './pages/Edificio'
 
 function Guard({ children }) {
   const token = useAuthStore(s => s.token)
@@ -38,6 +39,7 @@ export default function App() {
         
         <Route path="/" element={<Guard><AppLayout /></Guard>}>
           <Route index             element={<Dashboard />} />
+          <Route path="edificio" element={<AdminOnly><Edificio /></AdminOnly>} />
           <Route path="residentes" element={<AdminOnly><Residentes /></AdminOnly>} />
           <Route path="cuotas"     element={<Cuotas />} />
           <Route path="reportes"   element={<AdminOnly><Reportes /></AdminOnly>} />

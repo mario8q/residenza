@@ -5,6 +5,7 @@ const NAV_ADMIN = [
   { section:'Principal' },
   { to:'/',            icon:'📊', label:'Dashboard' },
   { to:'/residentes',  icon:'👥', label:'Residentes' },
+  { to:'/edificio',    icon:'🏢', label:'Edificio' }, 
   { section:'Finanzas' },
   { to:'/cuotas',      icon:'💰', label:'Cuotas y Pagos' },
   { to:'/reportes',    icon:'📈', label:'Reportes' },
