@@ -15,5 +15,14 @@ router.post('/register/residente',    controller.registerResidente);
 router.post('/cambiar-password',      verifyToken, controller.cambiarPassword);
 router.post('/refresh', controller.refresh);
 router.post('/logout',  verifyToken, controller.logout);
- 
+router.get('/conjuntos/disponibles', async (req, res, next) => {
+  try {
+    const { query: dbQuery } = require('../config/database');
+    const { rows } = await dbQuery(
+      `SELECT id, nombre, schema_name FROM public.conjuntos WHERE activo = TRUE ORDER BY nombre`
+    );
+    res.json({ data: rows });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

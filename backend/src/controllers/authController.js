@@ -270,10 +270,10 @@ async function loginResidente(req, res, next) {
 
 async function registerResidente(req, res, next) {
   try {
-    const { nombre, documento, tipo_documento, email, telefono, apto_codigo, password, passwordConfirm } = req.body;
+    const { nombre, documento, tipo_documento, email, telefono, conjunto_id, apto_codigo, password, passwordConfirm } = req.body;
 
     // Validaciones
-    if (!nombre || !documento || !email || !telefono || !apto_codigo || !password || !passwordConfirm) {
+    if (!nombre || !documento || !email || !telefono || !conjunto_id || !apto_codigo || !password || !passwordConfirm) {
       return res.status(400).json({ error: 'Todos los campos son requeridos.' });
     }
 
@@ -289,49 +289,45 @@ async function registerResidente(req, res, next) {
       return res.status(400).json({ error: 'Formato de email inválido.' });
     }
 
-    // Obtener todos los conjuntos activos para encontrar el apartamento
-    const { conjuntoQuery } = require('../config/database');
-    const conjuntosRes = await query(
-      'SELECT id, schema_name, nombre FROM public.conjuntos WHERE activo = TRUE'
+    // Obtener conjunto específico
+    const conjRes = await query(
+      'SELECT id, schema_name, nombre FROM public.conjuntos WHERE id = $1 AND activo = TRUE',
+      [parseInt(conjunto_id)]
     );
-    const conjuntos = conjuntosRes.rows;
 
-    let apartamento = null;
-    let conjuntoInfo = null;
-
-    // Buscar el apartamento en todos los conjuntos
-    for (const conjunto of conjuntos) {
-      const aptRes = await conjuntoQuery(
-        conjunto.schema_name,
-        `SELECT id, codigo, torre_id FROM apartamentos WHERE codigo = $1`,
-        [apto_codigo.toUpperCase()]
-      );
-
-      if (aptRes.rows.length > 0) {
-        apartamento = aptRes.rows[0];
-        conjuntoInfo = conjunto;
-        break;
-      }
+    if (conjRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Conjunto no encontrado o inactivo.' });
     }
 
-    if (!apartamento) {
-      return res.status(404).json({ error: `Apartamento ${apto_codigo} no encontrado en ningún conjunto.` });
+    const conjuntoInfo = conjRes.rows[0];
+
+    // Buscar apartamento en el conjunto específico
+    const { conjuntoQuery } = require('../config/database');
+    const aptRes = await conjuntoQuery(
+      conjuntoInfo.schema_name,
+      `SELECT id, codigo FROM apartamentos WHERE UPPER(codigo) = UPPER($1)`,
+      [apto_codigo]
+    );
+
+    if (aptRes.rows.length === 0) {
+      return res.status(404).json({ error: `Apartamento ${apto_codigo} no encontrado en este conjunto.` });
     }
+
+    const apartamento = aptRes.rows[0];
 
     // Verificar que el email no exista en el conjunto
-    const { conjuntoQuery: conjuntoQuery2 } = require('../config/database');
-    const emailRes = await conjuntoQuery2(
+    const emailRes = await conjuntoQuery(
       conjuntoInfo.schema_name,
-      `SELECT id FROM residentes WHERE email = $1 AND activo = TRUE`,
-      [email.toLowerCase().trim()]
+      `SELECT id FROM residentes WHERE LOWER(email) = LOWER($1) AND activo = TRUE`,
+      [email.trim()]
     );
 
     if (emailRes.rows.length > 0) {
-      return res.status(409).json({ error: 'Este email ya está registrado en el sistema.' });
+      return res.status(409).json({ error: 'Este email ya está registrado en este conjunto.' });
     }
 
     // Verificar que el documento no exista en el conjunto
-    const docRes = await conjuntoQuery2(
+    const docRes = await conjuntoQuery(
       conjuntoInfo.schema_name,
       `SELECT id FROM residentes WHERE documento = $1 AND activo = TRUE`,
       [documento]
@@ -350,8 +346,8 @@ async function registerResidente(req, res, next) {
     try {
       const createRes = await client.query(`
         INSERT INTO residentes
-          (apartamento_id, nombre, documento, tipo_documento, email, telefono, password_hash, activo, fecha_ingreso)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW())
+          (apartamento_id, nombre, documento, tipo_documento, email, telefono, password_hash, tipo_residente, activo, fecha_ingreso)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW())
         RETURNING id, nombre, email, telefono
       `, [
         apartamento.id,
@@ -361,11 +357,12 @@ async function registerResidente(req, res, next) {
         email.toLowerCase().trim(),
         telefono,
         password_hash,
+        'Propietario',
       ]);
 
       const nuevoResidente = createRes.rows[0];
 
-      // Generar tokens automáticamente después del registro
+      // Generar tokens automáticamente
       const payload = {
         id:          nuevoResidente.id,
         email:       nuevoResidente.email,
@@ -373,7 +370,7 @@ async function registerResidente(req, res, next) {
         rol:         'residente',
         conjuntoId:  conjuntoInfo.id,
         schema:      conjuntoInfo.schema_name,
-        apartamento: apto_codigo.toUpperCase(),
+        apartamento: apartamento.codigo,
       };
 
       const { access, refresh } = generateTokens(payload);
@@ -389,9 +386,9 @@ async function registerResidente(req, res, next) {
           rol:             'residente',
           conjuntoId:      conjuntoInfo.id,
           conjuntoNombre:  conjuntoInfo.nombre,
-          apartamento:     apto_codigo.toUpperCase(),
+          apartamento:     apartamento.codigo,
         },
-        message: 'Registro completado. Bienvenido!',
+        message: 'Registro completado. ¡Bienvenido!',
       });
     } finally {
       client.release();
