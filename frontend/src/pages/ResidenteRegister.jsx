@@ -6,25 +6,32 @@ import { useToast } from '../components/ui/Toast';
 export default function ResidenteRegister() {
   const [conjuntos, setConjuntos] = useState([]);
   const [conjuntoSeleccionado, setConjuntoSeleccionado] = useState('');
-  const [apartamentos, setApartamentos] = useState([]);
   
+  const [torres, setTorres] = useState([]);
+  const [torreSeleccionada, setTorreSeleccionada] = useState('');
+  const [loadingTorres, setLoadingTorres] = useState(false);
+  
+  const [apartamentos, setApartamentos] = useState([]);
+  const [aptoSeleccionado, setAptoSeleccionado] = useState('');
+  const [loadingApts, setLoadingApts] = useState(false);
+
   const [nombre, setNombre] = useState('');
   const [documento, setDocumento] = useState('');
   const [tipoDocumento, setTipoDocumento] = useState('CC');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [aptoSeleccionado, setAptoSeleccionado] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingApts, setLoadingApts] = useState(false);
 
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Cargar conjuntos disponibles
+  // ────────────────────────────────────────────────────────
+  // PASO 1: Cargar conjuntos disponibles (solo una vez)
+  // ────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchConjuntos = async () => {
       try {
@@ -32,18 +39,59 @@ export default function ResidenteRegister() {
         const data = await res.json();
         if (res.ok) {
           setConjuntos(data.data || []);
+        } else {
+          toast.error('Error cargando conjuntos.');
         }
       } catch (err) {
         console.error('Error cargando conjuntos:', err);
         toast.error('Error cargando conjuntos.');
       }
     };
+    
     fetchConjuntos();
-  }, []);
+  }, []); 
 
-  // Cargar apartamentos cuando cambia el conjunto
+  // ────────────────────────────────────────────────────────
+  // PASO 2: Cuando cambia el conjunto, cargar sus torres
+  // ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!conjuntoSeleccionado) {
+      setTorres([]);
+      setTorreSeleccionada('');
+      setApartamentos([]);
+      return;
+    }
+
+    const fetchTorres = async () => {
+      setLoadingTorres(true);
+      try {
+        const res = await fetch(
+          `/api/apartamentos/publicas/conjuntos/${conjuntoSeleccionado}/torres`
+        );
+        const data = await res.json();
+        if (res.ok) {
+          setTorres(data.data || []);
+          setTorreSeleccionada('');
+          setApartamentos([]);
+        } else {
+          toast.error(data.error || 'Error cargando torres.');
+        }
+      } catch (err) {
+        console.error('Error cargando torres:', err);
+        toast.error('Error cargando torres.');
+      } finally {
+        setLoadingTorres(false);
+      }
+    };
+
+    fetchTorres();
+  }, [conjuntoSeleccionado]); 
+
+  // ────────────────────────────────────────────────────────
+  // PASO 3: Cuando cambia la torre, cargar sus apartamentos
+  // ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!conjuntoSeleccionado || !torreSeleccionada) {
       setApartamentos([]);
       return;
     }
@@ -51,21 +99,15 @@ export default function ResidenteRegister() {
     const fetchApartamentos = async () => {
       setLoadingApts(true);
       try {
-        // Buscar el schema del conjunto
-        const conjRes = conjuntos.find(c => c.id === parseInt(conjuntoSeleccionado));
-        if (!conjRes) return;
-
-        // En una app real, necesitarías un endpoint específico que devuelva
-        // apartamentos disponibles filtrando por conjunto_id
-        // Por ahora usamos el endpoint público que los devuelve todos
-        const res = await fetch('/api/apartamentos/disponibles');
+        const res = await fetch(
+          `/api/apartamentos/publicas/conjuntos/${conjuntoSeleccionado}/torres/${torreSeleccionada}/apartamentos`
+        );
         const data = await res.json();
-
         if (res.ok) {
-          // Filtrar apartamentos que pertenecen al conjunto seleccionado
-          // NOTA: esto es una aproximación. Lo ideal sería un endpoint backend
-          // que devuelva `/api/conjuntos/{id}/apartamentos/disponibles`
           setApartamentos(data.data || []);
+          setAptoSeleccionado('');
+        } else {
+          toast.error(data.error || 'Error cargando apartamentos.');
         }
       } catch (err) {
         console.error('Error cargando apartamentos:', err);
@@ -76,7 +118,7 @@ export default function ResidenteRegister() {
     };
 
     fetchApartamentos();
-  }, [conjuntoSeleccionado, toast]);
+  }, [conjuntoSeleccionado, torreSeleccionada]); 
 
   const handle = async () => {
     setError('');
@@ -87,7 +129,20 @@ export default function ResidenteRegister() {
       return;
     }
 
-    if (!nombre || !documento || !email || !telefono || !aptoSeleccionado || !password || !passwordConfirm) {
+    if (!torreSeleccionada) {
+      setError('Selecciona una torre.');
+      return;
+    }
+
+    if (
+      !nombre ||
+      !documento ||
+      !email ||
+      !telefono ||
+      !aptoSeleccionado ||
+      !password ||
+      !passwordConfirm
+    ) {
       setError('Completa todos los campos.');
       return;
     }
@@ -136,7 +191,7 @@ export default function ResidenteRegister() {
         return;
       }
 
-      // Login automático después del registro
+      // Login automático
       setAuth(data.accessToken, {
         id: data.user.id,
         email: data.user.email,
@@ -150,78 +205,45 @@ export default function ResidenteRegister() {
       toast.success('¡Registro completado! Bienvenido.');
       navigate('/');
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error al conectar con el servidor.');
+      console.error(err);
+      setError('No se pudo conectar al servidor.');
     } finally {
       setLoading(false);
     }
   };
 
-  const conjuntoActual = conjuntos.find(c => c.id === parseInt(conjuntoSeleccionado));
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handle();
+    }
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '450px',
-        background: 'white',
-        borderRadius: '12px',
-        padding: '40px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-      }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '8px', color: '#333', fontSize: '28px', fontWeight: '700' }}>
-          Registro Residente
-        </h1>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: '24px', fontSize: '14px' }}>
-          Crea tu cuenta para acceder al portal
-        </p>
+    <div className="login-page">
+      <div className="login-wrapper">
+        <div className="brand">
+          <div className="brand-title">ResidenciasPro</div>
+          <div className="brand-sub">Registro de Residente</div>
+        </div>
 
-        {error && (
-          <div style={{
-            background: '#fee',
-            border: '1px solid #fcc',
-            color: '#c33',
-            padding: '12px',
-            borderRadius: '6px',
-            marginBottom: '16px',
-            fontSize: '14px',
-          }}>
-            {error}
-          </div>
-        )}
+        <div className="login-card" style={{ maxWidth: '500px' }}>
+          <div className="login-title">Crea tu cuenta</div>
+          <div className="login-sub">Completa el formulario para registrarte</div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handle(); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Selector de Conjunto */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Conjunto Residencial *
-            </label>
+          {error && <div className="error-banner">{error}</div>}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* PASO 1: CONJUNTO */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          <div className="form-group">
+            <label className="form-label">Conjunto residencial *</label>
             <select
+              className="form-input"
               value={conjuntoSeleccionado}
               onChange={(e) => setConjuntoSeleccionado(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontFamily: 'inherit',
-                background: 'white',
-                cursor: 'pointer',
-                transition: 'border 0.2s',
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#ddd'}
             >
-              <option value="">— Selecciona tu conjunto —</option>
-              {conjuntos.map(c => (
+              <option value="">Selecciona tu conjunto</option>
+              {conjuntos.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
                 </option>
@@ -229,35 +251,62 @@ export default function ResidenteRegister() {
             </select>
           </div>
 
-          {/* Selector de Apartamento (solo si hay conjunto) */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* PASO 2: TORRE (solo si hay conjunto) */}
+          {/* ════════════════════════════════════════════════════════════════ */}
           {conjuntoSeleccionado && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-                Apartamento *
-              </label>
-              {loadingApts ? (
-                <div style={{ padding: '12px', textAlign: 'center', color: '#666' }}>Cargando apartamentos...</div>
+            <div className="form-group">
+              <label className="form-label">Torre *</label>
+              {loadingTorres ? (
+                <div style={{ padding: '10px', color: '#999' }}>
+                  Cargando torres...
+                </div>
+              ) : torres.length === 0 ? (
+                <div style={{ padding: '10px', color: '#999' }}>
+                  No hay torres disponibles en este conjunto.
+                </div>
               ) : (
                 <select
+                  className="form-input"
+                  value={torreSeleccionada}
+                  onChange={(e) => setTorreSeleccionada(e.target.value)}
+                >
+                  <option value="">Selecciona una torre</option>
+                  {torres.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Torre {t.nombre} ({t.num_pisos} pisos)
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* PASO 3: APARTAMENTO (solo si hay torre) */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {torreSeleccionada && (
+            <div className="form-group">
+              <label className="form-label">Apartamento *</label>
+              {loadingApts ? (
+                <div style={{ padding: '10px', color: '#999' }}>
+                  Cargando apartamentos...
+                </div>
+              ) : apartamentos.length === 0 ? (
+                <div style={{ padding: '10px', color: '#999' }}>
+                  No hay apartamentos disponibles en esta torre.
+                </div>
+              ) : (
+                <select
+                  className="form-input"
                   value={aptoSeleccionado}
                   onChange={(e) => setAptoSeleccionado(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    background: 'white',
-                    cursor: 'pointer',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
                 >
-                  <option value="">— Selecciona tu apartamento —</option>
-                  {apartamentos.map(a => (
-                    <option key={a.id} value={a.codigo}>
-                      {a.codigo}
+                  <option value="">Selecciona tu apartamento</option>
+                  {apartamentos.map((apto) => (
+                    <option key={apto.id} value={apto.codigo}>
+                      {apto.codigo} - Piso {apto.piso}
+                      {apto.area_m2 ? ` (${apto.area_m2} m²)` : ''}
                     </option>
                   ))}
                 </select>
@@ -266,186 +315,131 @@ export default function ResidenteRegister() {
           )}
 
           {/* Nombre */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Nombre Completo *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Nombre completo *</label>
             <input
+              className="form-input"
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Juan Pérez"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              placeholder="Juan Pérez"
+              onKeyDown={handleKeyPress}
             />
           </div>
 
           {/* Documento */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-                Tipo *
-              </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '12px' }}>
+            <div className="form-group">
+              <label className="form-label">Tipo documento *</label>
               <select
+                className="form-input"
                 value={tipoDocumento}
                 onChange={(e) => setTipoDocumento(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  background: 'white',
-                }}
               >
-                <option value="CC">Cédula</option>
-                <option value="CE">Extranjería</option>
+                <option value="CC">Cédula (CC)</option>
+                <option value="CE">Cédula Extranjería (CE)</option>
                 <option value="NIT">NIT</option>
                 <option value="PAS">Pasaporte</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-                Documento *
-              </label>
+
+            <div className="form-group">
+              <label className="form-label">Número de documento *</label>
               <input
+                className="form-input"
                 type="text"
                 value={documento}
                 onChange={(e) => setDocumento(e.target.value)}
-                placeholder="Ej: 12345678"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="1234567890"
+                onKeyDown={handleKeyPress}
               />
             </div>
           </div>
 
           {/* Email */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Correo Electrónico *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Correo electrónico *</label>
             <input
+              className="form-input"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@email.com"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
+              onKeyDown={handleKeyPress}
             />
           </div>
 
           {/* Teléfono */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Teléfono (10 dígitos) *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Teléfono *</label>
             <input
+              className="form-input"
               type="tel"
               value={telefono}
-              onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="3105551234"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
+              onChange={(e) =>
+                setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))
+              }
+              placeholder="3001234567"
+              onKeyDown={handleKeyPress}
             />
           </div>
 
           {/* Contraseña */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Contraseña (mín. 6 caracteres) *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Contraseña *</label>
             <input
+              className="form-input"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
+              placeholder="Mínimo 6 caracteres"
+              onKeyDown={handleKeyPress}
             />
           </div>
 
-          {/* Confirmar Contraseña */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
-              Confirmar Contraseña *
-            </label>
+          {/* Confirmar contraseña */}
+          <div className="form-group">
+            <label className="form-label">Confirmar contraseña *</label>
             <input
+              className="form-input"
               type="password"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              placeholder="••••••••"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
+              placeholder="Repite tu contraseña"
+              onKeyDown={handleKeyPress}
             />
           </div>
 
-          {/* Botón Registrarse */}
+          {/* Botón */}
           <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea, #764ba2)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginTop: '8px',
-              transition: 'opacity 0.2s',
-              opacity: loading ? 0.7 : 1,
-            }}
+            className="btn-submit"
+            onClick={handle}
+            disabled={loading || loadingTorres || loadingApts}
           >
-            {loading ? 'Registrando...' : 'Registrarse'}
+            {loading ? (
+              <>
+                <div className="spinner" />
+                <span>Registrando...</span>
+              </>
+            ) : (
+              'Registrarse'
+            )}
           </button>
-        </form>
 
-        {/* Link a Login */}
-        <div style={{ textAlign: 'center', marginTop: '20px', color: '#666', fontSize: '14px' }}>
-          ¿Ya tienes cuenta?{' '}
-          <Link to="/login" style={{ color: '#667eea', textDecoration: 'none', fontWeight: '600' }}>
-            Inicia sesión aquí
-          </Link>
+          {/* Login */}
+          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.95rem' }}>
+            ¿Ya tienes cuenta?{' '}
+            <Link
+              to="/login"
+              style={{
+                color: '#6b4c8f',
+                textDecoration: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Inicia sesión
+            </Link>
+          </div>
         </div>
       </div>
     </div>
