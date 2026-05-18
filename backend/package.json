@@ -33,5 +33,17 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/controllers/**/*.js",
+      "src/middlewares/**/*.js",
+      "src/models/**/*.js"
+    ],
+    "coverageThreshold": {
+      "global": { "lines": 70 }
+    }
   }
 }
