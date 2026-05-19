@@ -13,4 +13,9 @@ export default defineConfig({
     outDir: '../residenciaspro/backend/public',
     emptyOutDir: true,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.js',
+  },
 })
