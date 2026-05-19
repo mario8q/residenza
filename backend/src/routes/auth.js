@@ -19,7 +19,7 @@ router.get('/conjuntos/disponibles', async (req, res, next) => {
   try {
     const { query: dbQuery } = require('../config/database');
     const { rows } = await dbQuery(
-      `SELECT id, nombre, schema_name FROM public.conjuntos WHERE activo = TRUE ORDER BY nombre`
+      `SELECT id, nombre FROM public.conjuntos WHERE activo = TRUE ORDER BY nombre`
     );
     res.json({ data: rows });
   } catch (err) { next(err); }

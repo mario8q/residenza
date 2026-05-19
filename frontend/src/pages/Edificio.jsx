@@ -270,134 +270,134 @@ export default function Edificio() {
       )}
 
       {/* Modal Torres */}
-      {modalTorre && (
-        <Modal onClose={() => setModalTorre(false)}>
-          <div style={{ maxWidth: '400px' }}>
-            <h3>Nueva Torre</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Nombre (A, B, C...):
-                </label>
-                <input
-                  type="text"
-                  className={`form-input${errors.nombre ? ' error' : ''}`}
-                  maxLength="10"
-                  value={formTorre.nombre}
-                  onChange={e => {
-                    setFormTorre(p => ({ ...p, nombre: e.target.value.toUpperCase() }));
-                    setErrors({});
-                  }}
-                  placeholder="Ej: A"
-                />
-                {errors.nombre && <div style={{ fontSize: '0.85rem', color: 'var(--red)' }}>{errors.nombre}</div>}
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Número de pisos:
-                </label>
-                <input
-                  type="number"
-                  className="form-input"
-                  min="1"
-                  value={formTorre.num_pisos}
-                  onChange={e => setFormTorre(p => ({ ...p, num_pisos: parseInt(e.target.value) }))}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <button className="btn btn-primary" onClick={crearTorre}>
-                  Crear Torre
-                </button>
-                <button className="btn btn-ghost" onClick={() => setModalTorre(false)}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
+      <Modal 
+        open={modalTorre} 
+        onClose={() => setModalTorre(false)}
+        title="Nueva Torre"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Nombre (A, B, C...):
+            </label>
+            <input
+              type="text"
+              className={`form-input${errors.nombre ? ' error' : ''}`}
+              maxLength="10"
+              value={formTorre.nombre}
+              onChange={e => {
+                setFormTorre(p => ({ ...p, nombre: e.target.value.toUpperCase() }));
+                setErrors({});
+              }}
+              placeholder="Ej: A"
+              autoFocus
+            />
+            {errors.nombre && <div style={{ fontSize: '0.85rem', color: '#d32f2f' }}>{errors.nombre}</div>}
           </div>
-        </Modal>
-      )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Número de pisos:
+            </label>
+            <input
+              type="number"
+              className="form-input"
+              min="1"
+              value={formTorre.num_pisos}
+              onChange={e => setFormTorre(p => ({ ...p, num_pisos: parseInt(e.target.value) }))}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button className="btn btn-primary" onClick={crearTorre}>
+              Crear Torre
+            </button>
+            <button className="btn btn-ghost" onClick={() => setModalTorre(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal Apartamentos */}
-      {modalApto && (
-        <Modal onClose={() => setModalApto(false)}>
-          <div style={{ maxWidth: '400px' }}>
-            <h3>Nuevo Apartamento</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Torre:
-                </label>
-                <select
-                  className={`form-input${errors.torre_id ? ' error' : ''}`}
-                  value={formApto.torre_id}
-                  onChange={e => {
-                    setFormApto(p => ({ ...p, torre_id: e.target.value }));
-                    setErrors({});
-                  }}
-                >
-                  <option value="">Selecciona una torre</option>
-                  {torres.map(t => (
-                    <option key={t.id} value={t.id}>
-                      Torre {t.nombre}
-                    </option>
-                  ))}
-                </select>
-                {errors.torre_id && <div style={{ fontSize: '0.85rem', color: 'var(--red)' }}>{errors.torre_id}</div>}
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Piso:
-                </label>
-                <input
-                  type="number"
-                  className="form-input"
-                  min="1"
-                  value={formApto.piso}
-                  onChange={e => setFormApto(p => ({ ...p, piso: parseInt(e.target.value) }))}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Número (01, 02, 03...):
-                </label>
-                <input
-                  type="text"
-                  className={`form-input${errors.numero ? ' error' : ''}`}
-                  maxLength="3"
-                  value={formApto.numero}
-                  onChange={e => {
-                    setFormApto(p => ({ ...p, numero: e.target.value }));
-                    setErrors({});
-                  }}
-                  placeholder="Ej: 01"
-                />
-                {errors.numero && <div style={{ fontSize: '0.85rem', color: 'var(--red)' }}>{errors.numero}</div>}
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Área (m²) - Opcional:
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="form-input"
-                  value={formApto.area_m2}
-                  onChange={e => setFormApto(p => ({ ...p, area_m2: e.target.value }))}
-                  placeholder="Ej: 65.50"
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <button className="btn btn-primary" onClick={crearApartamento}>
-                  Crear Apartamento
-                </button>
-                <button className="btn btn-ghost" onClick={() => setModalApto(false)}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
+      <Modal 
+        open={modalApto} 
+        onClose={() => setModalApto(false)}
+        title="Nuevo Apartamento"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Torre:
+            </label>
+            <select
+              className={`form-input${errors.torre_id ? ' error' : ''}`}
+              value={formApto.torre_id}
+              onChange={e => {
+                setFormApto(p => ({ ...p, torre_id: e.target.value }));
+                setErrors({});
+              }}
+              autoFocus
+            >
+              <option value="">Selecciona una torre</option>
+              {torres.map(t => (
+                <option key={t.id} value={t.id}>
+                  Torre {t.nombre}
+                </option>
+              ))}
+            </select>
+            {errors.torre_id && <div style={{ fontSize: '0.85rem', color: '#d32f2f' }}>{errors.torre_id}</div>}
           </div>
-        </Modal>
-      )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Piso:
+            </label>
+            <input
+              type="number"
+              className="form-input"
+              min="1"
+              value={formApto.piso}
+              onChange={e => setFormApto(p => ({ ...p, piso: parseInt(e.target.value) }))}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Número (01, 02, 03...):
+            </label>
+            <input
+              type="text"
+              className={`form-input${errors.numero ? ' error' : ''}`}
+              maxLength="3"
+              value={formApto.numero}
+              onChange={e => {
+                setFormApto(p => ({ ...p, numero: e.target.value }));
+                setErrors({});
+              }}
+              placeholder="Ej: 01"
+            />
+            {errors.numero && <div style={{ fontSize: '0.85rem', color: '#d32f2f' }}>{errors.numero}</div>}
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+              Área (m²) - Opcional:
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              className="form-input"
+              value={formApto.area_m2}
+              onChange={e => setFormApto(p => ({ ...p, area_m2: e.target.value }))}
+              placeholder="Ej: 65.50"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button className="btn btn-primary" onClick={crearApartamento}>
+              Crear Apartamento
+            </button>
+            <button className="btn btn-ghost" onClick={() => setModalApto(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -1,10 +1,18 @@
 export default function Modal({ open, onClose, title, children }) {
-  if (!open) return null;
+  // Si open es explícito, usarlo; sino, usar renderizado condicional
+  if (open === false) return null;
+  
   return (
-    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal-overlay" onClick={(e) => {
+      if (e.target === e.currentTarget && onClose) {
+        onClose();
+      }
+    }}>
       <div className="modal">
-        <div className="modal-title">{title}</div>
-        {children}
+        {title && <div className="modal-title">{title}</div>}
+        <div className="modal-content">
+          {children}
+        </div>
       </div>
     </div>
   );
