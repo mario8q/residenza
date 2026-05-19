@@ -211,32 +211,77 @@ router.get('/estado/admin', verifyToken, requireRol('admin'), setTenant, async (
     // Obtener mes y año actual
     const hoy = new Date();
     const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const mesFull = `${anio}-${mes}`;
+    const mes = hoy.getMonth() + 1; // 1-12 sin padStart para la comparación
 
+    // PRIMERO: Crear o obtener el período actual
+    const periodoRes = await req.tenantQuery(
+      `SELECT id, cuota_base FROM periodos WHERE anio = $1 AND mes = $2`,
+      [anio, mes]
+    );
+
+    let periodoId;
+    let cuotaBase = 210000; // valor por defecto
+
+    if (periodoRes.rows.length === 0) {
+      // Crear período si no existe
+      const ultimoDia = new Date(anio, mes, 0).getDate();
+      const fechaVence = `${anio}-${String(mes).padStart(2, '0')}-${ultimoDia}`;
+
+      const createPeriodo = await req.tenantQuery(
+        `INSERT INTO periodos (anio, mes, cuota_base, fecha_vence, tasa_mora)
+         VALUES ($1, $2, $3, $4, 0.015)
+         RETURNING id, cuota_base`,
+        [anio, mes, cuotaBase, fechaVence]
+      );
+      periodoId = createPeriodo.rows[0].id;
+      cuotaBase = createPeriodo.rows[0].cuota_base;
+    } else {
+      periodoId = periodoRes.rows[0].id;
+      cuotaBase = periodoRes.rows[0].cuota_base;
+    }
+
+    // SEGUNDO: Asegurar que existe obligación para cada apartamento
+    const aptos = await req.tenantQuery(`SELECT id FROM apartamentos`);
+    for (const apto of aptos.rows) {
+      const obligRes = await req.tenantQuery(
+        `SELECT id FROM obligaciones WHERE periodo_id = $1 AND apartamento_id = $2`,
+        [periodoId, apto.id]
+      );
+      
+      if (obligRes.rows.length === 0) {
+        // Crear obligación
+        await req.tenantQuery(
+          `INSERT INTO obligaciones (periodo_id, apartamento_id, monto_base, interes_mora)
+           VALUES ($1, $2, $3, 0)`,
+          [periodoId, apto.id, cuotaBase]
+        );
+      }
+    }
+
+    // TERCERO: Obtener el estado de cada apartamento
     const result = await req.tenantQuery(
       `SELECT 
         a.id,
         a.codigo AS apto,
-        r.nombre,
-        p.cuota_base,
-        COALESCE(SUM(pag.monto), 0)::NUMERIC(12,2) AS pagado,
-        (p.cuota_base - COALESCE(SUM(pag.monto), 0))::NUMERIC(12,2) AS saldo,
+        COALESCE(r.nombre, '(Sin residente)') AS nombre,
+        r.id AS residente_id,
+        $2::NUMERIC AS cuota_base,
+        COALESCE(SUM(pag.monto), 0)::NUMERIC AS pagado,
+        ($2::NUMERIC - COALESCE(SUM(pag.monto), 0))::NUMERIC AS saldo,
         CASE 
-          WHEN COALESCE(SUM(pag.monto), 0) >= p.cuota_base THEN 'Pagado'
-          WHEN COALESCE(SUM(pag.monto), 0) > 0 THEN 'Parcial'
+          WHEN COALESCE(SUM(pag.monto), 0) >= $2::NUMERIC THEN 'Pagado'
+          WHEN COALESCE(SUM(pag.monto), 0) > 0            THEN 'Parcial'
           ELSE 'Pendiente'
         END AS estado
-       FROM apartamentos a
-       LEFT JOIN residentes r ON r.apartamento_id = a.id
-       LEFT JOIN periodos p ON p.anio = $1 AND LPAD(p.mes::TEXT, 2, '0') = $2
-       LEFT JOIN obligaciones o ON o.apartamento_id = a.id AND o.periodo_id = p.id
-       LEFT JOIN pagos pag ON pag.obligacion_id = o.id
-       WHERE p.id IS NOT NULL
-       GROUP BY a.id, a.codigo, r.nombre, p.cuota_base
-       ORDER BY a.codigo ASC`,
-      [anio, mes]
+      FROM apartamentos a
+      LEFT JOIN residentes r ON r.apartamento_id = a.id AND r.activo = TRUE
+      LEFT JOIN obligaciones o ON o.apartamento_id = a.id AND o.periodo_id = $1
+      LEFT JOIN pagos pag ON pag.obligacion_id = o.id
+      GROUP BY a.id, a.codigo, r.id, r.nombre
+      ORDER BY a.codigo ASC`,
+      [periodoId, cuotaBase]
     );
+
     res.json({ data: result.rows });
   } catch (err) { next(err); }
 });
