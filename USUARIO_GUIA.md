@@ -24,9 +24,6 @@
 3. **Haz clic** en el botón "Iniciar Sesión"
 4. Si los datos son correctos, serás redirigido al **Dashboard principal**
 
-### ¿Olvidaste tu Contraseña?
-- Contacta al administrador del conjunto para que reinicie tu contraseña
-
 ---
 
 ## 👨‍💼 Guía para Administradores
