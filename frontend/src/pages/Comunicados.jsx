@@ -95,11 +95,6 @@ export default function Comunicados() {
                   <div><div style={{fontSize:'.72rem',color:'var(--text3)'}}>Este mes</div><div className="stats-box-val" style={{color:'var(--accent2)'}}>{mesActual}</div></div>
                 </div>
                 <div>
-                  <div style={{fontSize:'.8rem',color:'var(--text2)',marginBottom:6}}>Tasa de apertura promedio</div>
-                  <div style={{fontFamily:'var(--font-display)',fontSize:'1.8rem',color:'var(--accent3)',marginBottom:4}}>{avgAp}%</div>
-                  <div className="progress-wrap"><div className="progress-bar" style={{width:`${avgAp}%`,background:'var(--accent3)'}}/></div>
-                </div>
-                <div>
                   <div style={{fontSize:'.8rem',color:'var(--text2)',marginBottom:10}}>Por tipo</div>
                   {[
                     {label:'📢 General',  badge:'badge-blue',   count:lista.filter(c=>c.destinatarios==='General').length},
