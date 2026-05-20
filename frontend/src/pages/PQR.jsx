@@ -124,7 +124,7 @@ export default function PQR() {
           {isResidente && (
             <div className="form-group">
               <label className="form-label">Tu Apartamento</label>
-              <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
+              <div style={{ padding: '10px', background: '#000e23', borderRadius: '6px' }}>
                 {user?.apartamento}
               </div>
             </div>

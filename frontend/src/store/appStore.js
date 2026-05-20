@@ -427,32 +427,45 @@ const useAppStore = create((set, get) => ({
 
   getRecaudoMensual: () => {
     const pagos = get().pagos;
+    const hoy = new Date();
+    const anio = hoy.getFullYear(); // 2026
 
     const meses = [
-      '2025-01',
-      '2025-02',
-      '2025-03',
-      '2025-04',
-      '2025-05',
-      '2025-06',
-      '2025-07',
-      '2025-08',
-      '2025-09',
-      '2025-10',
-      '2025-11',
-      '2025-12',
+      `${anio}-01`,
+      `${anio}-02`,
+      `${anio}-03`,
+      `${anio}-04`,
+      `${anio}-05`,
+      `${anio}-06`,
+      `${anio}-07`,
+      `${anio}-08`,
+      `${anio}-09`,
+      `${anio}-10`,
+      `${anio}-11`,
+      `${anio}-12`,
     ];
 
-    return meses.map((mes) => {
+    const nombresCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    const datos = meses.map((mes, idx) => {
       const total = pagos
         .filter((p) => p.mes === mes)
         .reduce((sum, p) => sum + Number(p.monto), 0);
-
       return {
-        mes,
+        label: nombresCortos[idx],
         total,
+        mes,
       };
     });
+
+    // Calcular el máximo para porcentaje
+    const maxTotal = Math.max(...datos.map(d => d.total), 1);
+
+    // Agregar pct a cada dato
+    return datos.map(d => ({
+      ...d,
+      pct: (d.total / maxTotal) * 100,
+    }));
   },
 
   getEstadoPago: (apto, mes) => {
